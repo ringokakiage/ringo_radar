@@ -18,8 +18,8 @@ font_bold = FontManager('https://raw.githubusercontent.com/google/fonts/main/apa
 
 # Title and subtitle
 st.title("Ringo Radar")
-st.subheader("Criado por ringokakiage | Database: Wyscout | Inspiração: @BenGriffis")
-st.write("Com este aplicativo, você pode gerar o radar de impacto, ou Ringo Radar, de jogadores sul-americanos em ligas de interesse para o scouting do seu time.\n Você pode utilizar as imagens geradas pela ferramenta, desde que os créditos ao autor sejam devidamente atribuídos.")
+st.subheader("Criado por ringokakiage | Database: Wyscout")
+st.write("Com este aplicativo, você pode gerar o radar de impacto, ou Ringo Radar, de jogadores sul-americanos em ligas de interesse para o scouting do seu time.\n Você pode utilizar as imagens geradas pela ferramenta, desde que os créditos ao autor sejam devidamente atribuídos. | Inspiração: @BenGriffis")
 
 # Load the database
 wyscout = pd.read_csv("wyscout_database_nov2024.csv")
