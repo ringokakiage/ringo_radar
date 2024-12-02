@@ -347,7 +347,7 @@ def create_pizza_plot(player_info, position_dfs, plot_type):
     
     if jogador_pizza.empty:
         st.error(f"No data found for player: {player_name} in team: {player_team} under position: {primary_position}")
-        return None
+        # return None
         
     # Number of players in the database
     num_players = player_df.shape[0]
