@@ -70,7 +70,7 @@ with st.sidebar:
         "Compare o jogador com:",
         ["Toda a base de dados", "Jogadores da mesma liga"]
     )
-    st.write("Database atualizada: Dezembro/2024")
+    st.write("Database atualizada até Dezembro/2024")
 
 # Normalize positions in the dataframe
 def normalize_positions(df, position_map):
