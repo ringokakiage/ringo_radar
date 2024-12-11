@@ -22,7 +22,7 @@ st.subheader("Criado por ringokakiage | Database: Wyscout")
 st.write("Com este aplicativo, você pode gerar o radar de impacto, ou Ringo Radar, de jogadores sul-americanos em ligas de interesse para o scouting do seu time.\n Você pode utilizar as imagens geradas pela ferramenta, desde que os créditos ao autor sejam devidamente atribuídos. | Inspiração: @BenGriffis")
 
 # Load the database
-wyscout = pd.read_csv("wyscout_database_nov2024.csv")
+wyscout = pd.read_csv("wyscout_database_dez2024.csv")
 
 # Version 1.01 - fixed a bug where some players radar were not being generated correctly.
 
@@ -70,7 +70,7 @@ with st.sidebar:
         "Compare o jogador com:",
         ["Toda a base de dados", "Jogadores da mesma liga"]
     )
-    st.write("Database atualizada até Novembro de 2024")
+    st.write("Database atualizada: Dezembro/2024")
 
 # Normalize positions in the dataframe
 def normalize_positions(df, position_map):
