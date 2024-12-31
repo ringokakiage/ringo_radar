@@ -5,6 +5,13 @@ import pandas as pd
 from mplsoccer import PyPizza, FontManager, Sbopen
 from scipy import stats
 
+
+def click_button():
+    st.session_state.clicked = True
+def reset_click_button():
+    st.session_state.clicked = False
+
+
 # Load the soccer data
 parser = Sbopen()
 
@@ -22,55 +29,117 @@ st.subheader("Criado por ringokakiage | Database: Wyscout")
 st.write("Com este aplicativo, você pode gerar o radar de impacto, ou Ringo Radar, de jogadores sul-americanos em ligas de interesse para o scouting do seu time.\n Você pode utilizar as imagens geradas pela ferramenta, desde que os créditos ao autor sejam devidamente atribuídos. | Inspiração: @BenGriffis")
 
 # Load the database
-wyscout = pd.read_csv("wyscout_database_dez2024.csv")
+wyscout = pd.read_csv("database_jan25.csv")
 
-# Version 1.01 - fixed a bug where some players radar were not being generated correctly.
+if "generate" not in st.session_state:
+    st.session_state["generate"] = False
+if "search_mode" not in st.session_state:
+    st.session_state["search_mode"] = "Search by Name"
 
 # Sidebar with filters
 with st.sidebar:
-    st.header("Selecione os filtros")
-
-    # Step 1: Select the league
-    league = st.selectbox("Selecione a liga", wyscout["League"].sort_values().unique())
-
-    # Step 2: Select the team based on the league
-    teams = wyscout[wyscout["League"] == league]["Team within selected timeframe"].sort_values().unique()
-    team = st.selectbox("Selecione o time", teams)
-
-    # Step 3: Select the player based on the team
-    players = wyscout[wyscout["Team within selected timeframe"] == team]["Player"].sort_values().unique()
-    player = st.selectbox("Selecione o jogador", players)
-
-    pos_options = wyscout[
-    (wyscout["Player"] == player) & 
-    (wyscout["Team within selected timeframe"] == team)]["Position"]
-
-    if pos_options.empty:
-        st.error(f"No position data found for player: {player} in team: {team}.")
-        position_list = []
+    st.header("🔍 Pesquisar Jogador ou Filtrar Manualmente")
+    
+    # Toggle between Search and Manual Mode
+    search_mode = st.radio("Modo de busca:", ["Search by Name", "Manual Search"])
+    st.session_state["search_mode"] = search_mode
+    
+    if search_mode == "Search by Name":
+        # Player Search Mode
+        search_input = st.text_input("Digite o nome do jogador (parcial ou completo):")
+        
+        if search_input:
+            wyscout['Player_Team_League'] = wyscout['Player'] + " (" + wyscout['Team within selected timeframe'] + ", " + wyscout['League'] + ")"
+            filtered_players = wyscout[wyscout["Player_Team_League"].str.contains(search_input, case=False, na=False)]["Player_Team_League"].unique()
+            
+            if filtered_players.size > 0:
+                selected_player_info = st.selectbox("Selecione o jogador sugerido:", filtered_players)
+                player, team, league = selected_player_info.split(" (")[0], selected_player_info.split(" (")[1].split(", ")[0], selected_player_info.split(", ")[1].rstrip(")")
+            else:
+                st.warning("Nenhum jogador encontrado com esse nome.")
+                player, team, league = None, None, None
+        else:
+            player, team, league = None, None, None
+        
+        if player and team and league:
+            pos_options = wyscout[
+                (wyscout["Player"] == player) & 
+                (wyscout["Team within selected timeframe"] == team) &
+                (wyscout["League"] == league)
+            ]["Position"]
+            
+            if not pos_options.empty:
+                pos_options = pos_options.iloc[0]
+                position_list = sorted([pos.strip() for pos in pos_options.split(",")])
+            else:
+                position_list = []
+            
+            if position_list:
+                position = st.selectbox("Selecione a posição", list(position_list), index=0)
+            else:
+                position = None
+        
+        if player and team and league and position:
+            st.button('Generate', on_click=click_button)
+        else:
+            st.warning("Preencha todos os campos antes de gerar a visualização.")
+    
     else:
-        # Get the first row for the matching player-team combination
-        pos_options = pos_options.iloc[0]
-        position_list = sorted([pos.strip() for pos in pos_options.split(",")])
-
-    position = st.selectbox("Selecione a posição", position_list)
-
-    # Step 5: Slider for minimum minutes
+        # Manual Search Mode
+        league = st.selectbox("Selecione a liga", ["Selecione a liga"] + list(wyscout["League"].sort_values().unique()), index=0)
+        
+        if league != "Selecione a liga":
+            teams = wyscout[wyscout["League"] == league]["Team within selected timeframe"].sort_values().unique()
+        else:
+            teams = []
+        team = st.selectbox("Selecione o time", ["Selecione o time"] + list(teams), index=0)
+        
+        if team != "Selecione o time":
+            players = wyscout[wyscout["Team within selected timeframe"] == team]["Player"].sort_values().unique()
+        else:
+            players = []
+        player = st.selectbox("Selecione o jogador", ["Selecione o jogador"] + list(players), index=0)
+        
+        if player != "Selecione o jogador":
+            pos_options = wyscout[
+                (wyscout["Player"] == player) & 
+                (wyscout["Team within selected timeframe"] == team)
+            ]["Position"]
+            
+            if not pos_options.empty:
+                pos_options = pos_options.iloc[0]
+                position_list = sorted([pos.strip() for pos in pos_options.split(",")])
+            else:
+                position_list = []
+        else:
+            position_list = []
+        
+        if position_list:
+            position = st.selectbox("Selecione a posição", list(position_list), index=0)
+        else:
+            position = None
+        
+        if league != "Selecione a liga" and team != "Selecione o time" and player != "Selecione o jogador" and position:
+            st.button('Generate', on_click=click_button)
+        else:
+            st.warning("Preencha todos os campos antes de gerar a visualização.")
+    
+    st.markdown("---")
+    # Common Settings
     min_minutes = st.slider(
         "Selecione o mínimo de minutos jogados", 
         min_value=300, 
         max_value=800, 
         value=500
     )
-
-    # Value display
+    
     value_display = st.selectbox("Valores do radar:", ["Percentile", "Index values"])
-
     comparison_scope = st.selectbox(
         "Compare o jogador com:",
         ["Toda a base de dados", "Jogadores da mesma liga"]
     )
-    st.write("Database atualizada até Dezembro/2024")
+    st.write("Database atualizada até Dezembro de 2024")
+
 
 # Normalize positions in the dataframe
 def normalize_positions(df, position_map):
@@ -347,8 +416,8 @@ def create_pizza_plot(player_info, position_dfs, plot_type):
     
     if jogador_pizza.empty:
         st.error(f"No data found for player: {player_name} in team: {player_team} under position: {primary_position}")
-        # return None
-        
+    #     return None
+
     # Number of players in the database
     num_players = player_df.shape[0]
 
@@ -440,7 +509,7 @@ def create_pizza_plot(player_info, position_dfs, plot_type):
     player_minutes = jogador_pizza.iloc[0]['Minutes played']
     
     # Create the title and subtitle
-    file_suffix = {'att': 'attacking', 'pass': 'passing', 'def': 'defensive', 'gen': 'general', 'metrics': 'user metrics', 'swc': 'swc metrics'}[plot_type]
+    file_suffix = {'att': 'attacking', 'pass': 'passing', 'def': 'defensive', 'gen': 'general', 'metrics': 'Ringo metrics', 'swc': 'swc metrics'}[plot_type]
 
     title = f'{player_name}, Age: {player_age}, {player_position}, {player_minutes} minutes, {player_club}'
     subtitle = f'League: {player_league}, Percentile rankings: {file_suffix}'
@@ -461,7 +530,6 @@ def create_pizza_plot(player_info, position_dfs, plot_type):
 
     # Add credits
     CREDIT_1 = f"data: wyscout | values in: {value_display}\ndb: {num_players} {position_key} with {min_minutes} + min from 12 relevant leagues" 
-   # CREDIT_2 = "wSwC: shooting relevant contributions\nwPwC: passing relevant contributions\nwAwC: attacking relevant contributions\nwDwC: defensive relevant contributions"
     CREDIT_3 = "reddit: u/ringokakiage | ringokakiage.wordpress.com"
     
     fig.text(
@@ -507,15 +575,6 @@ def create_pizza_plot(player_info, position_dfs, plot_type):
         ha="right"
     )
 
-    # fig.text(
-    #     0.12, 0.9, f"{CREDIT_2}", size=9,
-    #     fontproperties=font_italic.prop, color="#000000",
-    #     ha="left", bbox=dict(boxstyle="round",
-    #                ec=(1., 0.5, 0.5),
-    #                fc=(1., 0.8, 0.8),
-    #                         )
-    # )
-
     # Return the figure and axes
     return fig, ax
 
@@ -528,12 +587,22 @@ plot_type = 'metrics'
 # Create the pizza plot
 result = create_pizza_plot(player_info, position_dfs, plot_type)
 
-# Show the pizza plot
-if result is not None:
-    fig, _ = result
-    st.pyplot(fig)
+
+# Check if "Generate" has been clicked
+if st.session_state.clicked:
+    if league and team and player and position:  # Ensure all inputs are selected
+        st.write(f"Generating radar for {player} in {league} ({team}, {position})")
+        if result is not None:
+            fig, _ = result
+            st.pyplot(fig)
+    else:
+        st.warning("Please select all parameters to generate the radar.")
 else:
-    st.warning("Unable to create the pizza plot. Check the player data or input parameters.")
+    st.write("Adjust the parameters in the sidebar and click 'Generate' to display the radar.")
+
+if 'clicked' not in st.session_state:
+        st.session_state.clicked = False
+
 
 # Write the player info for more information
 st.write(f"Player Info: {player_info}")
@@ -544,7 +613,8 @@ st.write(f"Player minutes: {chosen_player_minutes}")
 with st.expander('Como entender o funcionamento do aplicativo'):
     st.write('''
     Usando essa ferramenta, você pode gerar o radar de um jogador. Este radar tem como objetivo mostrar o desempenho de um jogador comparado com outros jogadores, trazendo em diferentes métricas autorais para auxiliar no scouting.\n
-    Primeiro, escolha a liga, o time e o jogador desejado.\n
+    Primeiro, decida se irá procurar por nome ou manualmente.\n
+    Basta digitar o nome que sugestões  simplesescolha a liga, o time e o jogador desejado.\n
     Em seguida, escolha qual a posição e o mínimo de minutos jogados. Por fim, escolha se deseja comparar o jogador com outros jogadores da mesma liga ou com toda a base de dados.\n
     O radar gerado mostra o desempenho do jogador em comparação com outros jogadores da mesma posição, com valores em percentis. As cores das fatias do radar são baseadas no percentil do jogador em cada métrica.
     ''')
