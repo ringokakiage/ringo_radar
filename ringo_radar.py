@@ -8,9 +8,10 @@ from scipy import stats
 
 def click_button():
     st.session_state.clicked = True
+
 def reset_click_button():
     st.session_state.clicked = False
-
+    st.experimental_rerun()
 
 # Load the soccer data
 parser = Sbopen()
@@ -26,6 +27,7 @@ font_bold = FontManager('https://raw.githubusercontent.com/google/fonts/main/apa
 # Title and subtitle
 st.title("Ringo Radar")
 st.subheader("Criado por ringokakiage | Database: Wyscout")
+st.divider()
 st.write("Com este aplicativo, você pode gerar o radar de impacto, ou Ringo Radar, de jogadores sul-americanos em ligas de interesse para o scouting do seu time.\n Você pode utilizar as imagens geradas pela ferramenta, desde que os créditos ao autor sejam devidamente atribuídos. | Inspiração: @BenGriffis")
 
 # Load the database
@@ -35,118 +37,6 @@ if "generate" not in st.session_state:
     st.session_state["generate"] = False
 if "search_mode" not in st.session_state:
     st.session_state["search_mode"] = "Search by Name"
-
-# Sidebar with filters
-with st.sidebar:
-    st.header("🔍 Pesquisar Jogador ou Filtrar Manualmente")
-    
-    # Toggle between Search and Manual Mode
-    search_mode = st.radio("Modo de busca:", ["Search by Name", "Manual Search"])
-    st.session_state["search_mode"] = search_mode
-    
-    if search_mode == "Search by Name":
-        # Player Search Mode
-        search_input = st.text_input("Digite o nome do jogador (parcial ou completo):")
-        
-        if search_input:
-            wyscout['Player_Team_League'] = wyscout['Player'] + " (" + wyscout['Team within selected timeframe'] + ", " + wyscout['League'] + ")"
-            filtered_players = wyscout[wyscout["Player_Team_League"].str.contains(search_input, case=False, na=False)]["Player_Team_League"].unique()
-            
-            if filtered_players.size > 0:
-                selected_player_info = st.selectbox("Selecione o jogador sugerido:", filtered_players)
-                player, team, league = selected_player_info.split(" (")[0], selected_player_info.split(" (")[1].split(", ")[0], selected_player_info.split(", ")[1].rstrip(")")
-            else:
-                st.warning("Nenhum jogador encontrado com esse nome.")
-                player, team, league = None, None, None
-        else:
-            player, team, league = None, None, None
-        
-        if player and team and league:
-            pos_options = wyscout[
-                (wyscout["Player"] == player) & 
-                (wyscout["Team within selected timeframe"] == team) &
-                (wyscout["League"] == league)
-            ]["Position"]
-            
-            if not pos_options.empty:
-                pos_options = pos_options.iloc[0]
-                position_list = sorted([pos.strip() for pos in pos_options.split(",")])
-            else:
-                position_list = []
-            
-            if position_list:
-                position = st.selectbox("Selecione a posição", list(position_list), index=0)
-            else:
-                position = None
-        
-        if player and team and league and position:
-            st.button('Generate', on_click=click_button)
-        else:
-            st.warning("Preencha todos os campos antes de gerar a visualização.")
-    
-    else:
-        # Manual Search Mode
-        league = st.selectbox("Selecione a liga", ["Selecione a liga"] + list(wyscout["League"].sort_values().unique()), index=0)
-        
-        if league != "Selecione a liga":
-            teams = wyscout[wyscout["League"] == league]["Team within selected timeframe"].sort_values().unique()
-        else:
-            teams = []
-        team = st.selectbox("Selecione o time", ["Selecione o time"] + list(teams), index=0)
-        
-        if team != "Selecione o time":
-            players = wyscout[wyscout["Team within selected timeframe"] == team]["Player"].sort_values().unique()
-        else:
-            players = []
-        player = st.selectbox("Selecione o jogador", ["Selecione o jogador"] + list(players), index=0)
-        
-        if player != "Selecione o jogador":
-            pos_options = wyscout[
-                (wyscout["Player"] == player) & 
-                (wyscout["Team within selected timeframe"] == team)
-            ]["Position"]
-            
-            if not pos_options.empty:
-                pos_options = pos_options.iloc[0]
-                position_list = sorted([pos.strip() for pos in pos_options.split(",")])
-            else:
-                position_list = []
-        else:
-            position_list = []
-        
-        if position_list:
-            position = st.selectbox("Selecione a posição", list(position_list), index=0)
-        else:
-            position = None
-        
-        if league != "Selecione a liga" and team != "Selecione o time" and player != "Selecione o jogador" and position:
-            st.button('Generate', on_click=click_button)
-        else:
-            st.warning("Preencha todos os campos antes de gerar a visualização.")
-    
-    st.markdown("---")
-    # Common Settings
-    min_minutes = st.slider(
-        "Selecione o mínimo de minutos jogados", 
-        min_value=300, 
-        max_value=800, 
-        value=500
-    )
-    
-    value_display = st.selectbox("Valores do radar:", ["Percentile", "Index values"])
-    comparison_scope = st.selectbox(
-        "Compare o jogador com:",
-        ["Toda a base de dados", "Jogadores da mesma liga"]
-    )
-    st.write("Database atualizada até Dezembro de 2024")
-
-
-# Normalize positions in the dataframe
-def normalize_positions(df, position_map):
-    position_cols = ["Primary position", "Secondary position", "Third position"]
-    for col in position_cols:
-        df[col] = df[col].apply(lambda x: position_map.get(x, x) if pd.notna(x) else "Unknown")
-    return df
 
 # Define the position map
 position_map = {
@@ -181,39 +71,67 @@ position_map = {
     "RWF": "WIN"
 }
 
-# Normalize positions in the original dataframe
-wyscout = normalize_positions(wyscout, position_map)
+# Sidebar with filters
+with st.sidebar:
+    st.header("🔍 Pesquisar Jogador ou Filtrar Manualmente")
+    
+    search_mode = st.radio("Modo de busca:", ["Search by Name", "Manual Search"])
+    st.session_state["search_mode"] = search_mode
+    
+    player, team, league, position = None, None, None, None
+    
+    if search_mode == "Search by Name":
+        search_input = st.text_input("Digite o nome do jogador (parcial ou completo):")
+        if search_input:
+            wyscout['Player_Team_League'] = wyscout['Player'] + " (" + wyscout['Team within selected timeframe'] + ", " + wyscout['League'] + ")"
+            filtered_players = wyscout[wyscout["Player_Team_League"].str.contains(search_input, case=False, na=False)]["Player_Team_League"].unique()
+            if filtered_players.size > 0:
+                selected_player_info = st.selectbox("Selecione o jogador sugerido:", filtered_players)
+                player, team, league = selected_player_info.split(" (")[0], selected_player_info.split(" (")[1].split(", ")[0], selected_player_info.split(", ")[1].rstrip(")")
+        ##### not working at the moment #####
+        if player and team and league:
+            pos_options = wyscout[(wyscout["Player"] == player) & (wyscout["Team within selected timeframe"] == team) & (wyscout["League"] == league)]['Position']
+            if not pos_options.empty:
+                pos_options = pos_options.iloc[0]
+                position_list = sorted([pos.strip() for pos in pos_options.split(",")])
+            else:
+                position_list = []
+            if position_list:
+                position = st.selectbox("Selecione a posição", list(position_list), index=0)
+    
+    else:
+        league = st.selectbox("Selecione a liga", ["Selecione a liga"] + list(wyscout["League"].sort_values().unique()), index=0)
+        if league != "Selecione a liga":
+            teams = wyscout[wyscout["League"] == league]["Team within selected timeframe"].sort_values().unique()
+            team = st.selectbox("Selecione o time", ["Selecione o time"] + list(teams), index=0)
+        if team != "Selecione o time":
+            players = wyscout[wyscout["Team within selected timeframe"] == team]["Player"].sort_values().unique()
+            player = st.selectbox("Selecione o jogador", ["Selecione o jogador"] + list(players), index=0)
+        if player != "Selecione o jogador":
+            pos_options = wyscout[(wyscout["Player"] == player) & (wyscout["Team within selected timeframe"] == team)]
+            if not pos_options.empty and pos_options.iloc[0]:
+                position_list = sorted([pos.strip() for pos in pos_options.iloc[0].split(",")])
+            if position_list:
+                position = st.selectbox("Selecione a posição", list(position_list), index=0)
 
-# Create dataframes for each position
-def create_position_dfs(position_key, df, graph_minutes=min_minutes):
-    temp_df = df[
-        (df["Minutes played"] >= graph_minutes) & 
-        (df[["Primary position", "Secondary position", "Third position"]].apply(lambda x: position_key in x.values, axis=1))
-    ]
-    result_df = temp_df.drop_duplicates(subset=["Wyscout id", "Team within selected timeframe", "League", "Position"], keep="first")
-    return result_df
+    if player and team and league and position:
+        st.button('Generate', on_click=click_button)
+    else:
+        st.warning("Preencha todos os campos antes de gerar a visualização.")
+    
+    st.markdown("---")
+    min_minutes = st.slider("Selecione o mínimo de minutos jogados", min_value=300, max_value=800, value=500)
+    value_display = st.selectbox("Valores do radar:", ["Percentile", "Index values"])
+    comparison_scope = st.selectbox("Compare o jogador com:", ["Toda a base de dados", "Jogadores da mesma liga"])
 
-position_dfs = {}
-for key in position_map.values():
-    position_dfs[key] = create_position_dfs(key, wyscout)
 
-# Filter data based on the selected player, team, league, and position
-def filter_data(wyscout, league, team, player, position):
-    filtered_data = wyscout[
-        (wyscout["League"] == league) & 
-        (wyscout["Team within selected timeframe"] == team) & 
-        (wyscout["Player"] == player) & 
-        (wyscout[["Primary position", "Secondary position", "Third position"]].apply(lambda x: position in x.values, axis=1))
-    ]
-    return filtered_data
+# chosen_player_minutes = wyscout[(wyscout["Player"] == player) & 
+#                                 (wyscout["Team within selected timeframe"] == team) & 
+#                                 (wyscout["League"] == league)]["Minutes played"].iloc[0]
+# if chosen_player_minutes < min_minutes:
+#     st.warning(f"O jogador {player} não jogou minutos suficientes ({chosen_player_minutes}).")
 
-chosen_player_minutes = wyscout[(wyscout["Player"] == player) & 
-                                (wyscout["Team within selected timeframe"] == team) & 
-                                (wyscout["League"] == league)]["Minutes played"].iloc[0]
-if chosen_player_minutes < min_minutes:
-    st.warning(f"O jogador {player} não jogou minutos suficientes ({chosen_player_minutes}).")
-
-player_data = filter_data(wyscout, league, team, player, position)
+# player_data = filter_data(wyscout, league, team, player, position)
 
 positions_gk = ['GK']
 
@@ -231,6 +149,54 @@ positions_amf = ['AMF', 'LAMF', 'RAMF']
 # Forwards
 positions_cf = ['CF']
 positions_win = ['LW', 'RW', 'LWF', 'RWF']
+
+def filter_data(wyscout, league, team, player, position):
+    if not position:
+        st.warning("Nenhuma posição selecionada para o filtro.")
+        return pd.DataFrame()
+    
+    filtered_data = wyscout[
+        (wyscout["League"] == league) & 
+        (wyscout["Team within selected timeframe"] == team) & 
+        (wyscout["Player"] == player) & 
+        (wyscout[["Primary position", "Secondary position", "Third position"]].apply(lambda x: position in x.values, axis=1))
+    ]
+    return filtered_data
+
+def is_valid_selection(player, team, league, position):
+    return all([player, team, league, position])
+
+if is_valid_selection(player, team, league, position):
+    chosen_player_minutes = wyscout[(wyscout["Player"] == player) &
+                                    (wyscout["Team within selected timeframe"] == team) &
+                                    (wyscout["League"] == league) &
+                                    (wyscout["Primary position"] == position)]["Minutes played"]
+    if not chosen_player_minutes.empty:
+        chosen_player_minutes = chosen_player_minutes.iloc[0]
+        if chosen_player_minutes < min_minutes:
+            st.warning(f"O jogador {player} não jogou minutos suficientes ({chosen_player_minutes}).")
+    player_data = filter_data(wyscout, league, team, player, position)
+
+def normalize_positions(df, position_map):
+    position_cols = ["Primary position", "Secondary position", "Third position"]
+    for col in position_cols:
+        df[col] = df[col].apply(lambda x: position_map.get(x, x) if pd.notna(x) else "Unknown")
+    return df
+# Normalize positions in the original dataframe
+wyscout = normalize_positions(wyscout, position_map)
+
+# Create dataframes for each position
+def create_position_dfs(position_key, df, graph_minutes=min_minutes):
+    temp_df = df[
+        (df["Minutes played"] >= graph_minutes) & 
+        (df[["Primary position", "Secondary position", "Third position"]].apply(lambda x: position_key in x.values, axis=1))
+    ]
+    result_df = temp_df.drop_duplicates(subset=["Wyscout id", "Team within selected timeframe", "League", "Position"], keep="first")
+    return result_df
+
+position_dfs = {}
+for key in position_map.values():
+    position_dfs[key] = create_position_dfs(key, wyscout)
 
 # Filter players based on the selected position
 if comparison_scope == "Toda a base de dados":
@@ -361,25 +327,23 @@ pizza_var_names_spaced_dict = {
 
 
 def map_primary_position(player_position):
-    # Split positions if multiple exist
-    positions = player_position.split(", ")
-    
-    # Map each position to its category
-    mapped_positions = [position_map.get(pos.strip(), None) for pos in positions]
-    
-    # Filter out unmapped positions
-    valid_positions = [pos for pos in mapped_positions if pos]
-    
-    # Return the primary (first) valid position or None
-    return valid_positions[0] if valid_positions else None
-
+    if not player_position:
+        return None
+    if isinstance(player_position, str):
+        positions = player_position.split(", ")
+        mapped_positions = [position_map.get(pos.strip(), None) for pos in positions]
+        valid_positions = [pos for pos in mapped_positions if pos]
+        return valid_positions[0] if valid_positions else None
+    return None
 
 def create_pizza_plot(player_info, position_dfs, plot_type):
     # Unpack player info
     player_league, player_team, player_name, player_position = player_info
 # Map primary position
     primary_position = map_primary_position(player_position)
-    if not primary_position:
+    if primary_position is None:
+        return None 
+    elif not primary_position:
         st.error(f"Positions {player_position} are not categorized.")
         return None
     
@@ -590,15 +554,14 @@ result = create_pizza_plot(player_info, position_dfs, plot_type)
 
 # Check if "Generate" has been clicked
 if st.session_state.clicked:
-    if league and team and player and position:  # Ensure all inputs are selected
+    if league and team and player and position and selected_key != "Unknown":
         st.write(f"Generating radar for {player} in {league} ({team}, {position})")
         if result is not None:
             fig, _ = result
             st.pyplot(fig)
     else:
-        st.warning("Please select all parameters to generate the radar.")
-else:
-    st.write("Adjust the parameters in the sidebar and click 'Generate' to display the radar.")
+        st.warning("Certifique-se de selecionar liga, time, jogador e posição válidos antes de gerar o radar.")
+
 
 if 'clicked' not in st.session_state:
         st.session_state.clicked = False
@@ -607,7 +570,6 @@ if 'clicked' not in st.session_state:
 # Write the player info for more information
 st.write(f"Player Info: {player_info}")
 st.write(f"Position Key: {position}")
-st.write(f"Player minutes: {chosen_player_minutes}")
 
 # Write the explanation of the application
 with st.expander('Como entender o funcionamento do aplicativo'):
