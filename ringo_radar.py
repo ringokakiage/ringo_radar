@@ -559,7 +559,6 @@ plot_type = 'metrics'
 # Create the pizza plot
 result = create_pizza_plot(player_info, position_dfs, plot_type)
 
-
 # Check if "Generate" has been clicked
 if st.session_state.clicked:
     if all([league, team, player, position]):
@@ -574,7 +573,6 @@ if st.session_state.clicked:
             st.warning("Não foi possível gerar o radar. Verifique se os dados estão completos.")
     else:
         st.warning("Certifique-se de selecionar liga, time, jogador e posição válidos antes de gerar o radar.")
-
 
 
 # Write the player info for more information
