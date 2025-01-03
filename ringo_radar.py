@@ -33,13 +33,19 @@ st.write("Com este aplicativo, você pode gerar o radar de impacto, ou Ringo Rad
 # Load the database
 wyscout = pd.read_csv("database_jan25.csv")
 
-# Initialize session state variables
-if 'clicked' not in st.session_state:
-    st.session_state.clicked = False
-if 'generate' not in st.session_state:
-    st.session_state["generate"] = False
-if 'search_mode' not in st.session_state:
-    st.session_state["search_mode"] = "Search by Name"
+# # Initialize session state variables
+# if 'clicked' not in st.session_state:
+#     st.session_state.clicked = False
+# if 'generate' not in st.session_state:
+#     st.session_state["generate"] = False
+# if 'search_mode' not in st.session_state:
+#     st.session_state["search_mode"] = "Search by Name"
+
+# Initialize session state variables safely
+for key, default_value in [("clicked", False), ("generate", False), ("search_mode", "Search by Name")]:
+    if key not in st.session_state:
+        st.session_state[key] = default_value
+
 
 # Define the position map
 position_map = {
@@ -557,17 +563,16 @@ result = create_pizza_plot(player_info, position_dfs, plot_type)
 
 # Check if "Generate" has been clicked
 if st.session_state.clicked:
-    if league and team and player and position and selected_key != "Unknown":
+    if all([league, team, player, position]):
         st.write(f"Generating radar for {player} in {league} ({team}, {position})")
+        
+        # Validate and render the radar plot
+        result = filter_data(wyscout, league, team, player, position)
         if result is not None:
             fig, _ = result
             st.pyplot(fig)
     else:
         st.warning("Certifique-se de selecionar liga, time, jogador e posição válidos antes de gerar o radar.")
-
-
-if 'clicked' not in st.session_state:
-        st.session_state.clicked = False
 
 
 # Write the player info for more information
