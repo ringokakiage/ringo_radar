@@ -33,9 +33,12 @@ st.write("Com este aplicativo, você pode gerar o radar de impacto, ou Ringo Rad
 # Load the database
 wyscout = pd.read_csv("database_jan25.csv")
 
-if "generate" not in st.session_state:
+# Initialize session state variables
+if 'clicked' not in st.session_state:
+    st.session_state.clicked = False
+if 'generate' not in st.session_state:
     st.session_state["generate"] = False
-if "search_mode" not in st.session_state:
+if 'search_mode' not in st.session_state:
     st.session_state["search_mode"] = "Search by Name"
 
 # Define the position map
