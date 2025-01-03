@@ -5,6 +5,7 @@ import pandas as pd
 from mplsoccer import PyPizza, FontManager, Sbopen
 from scipy import stats
 
+
 def click_button():
     st.session_state.clicked = True
 
@@ -558,6 +559,7 @@ plot_type = 'metrics'
 
 # Create the pizza plot
 result = create_pizza_plot(player_info, position_dfs, plot_type)
+
 
 # Check if "Generate" has been clicked
 if st.session_state.clicked:
