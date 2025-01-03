@@ -565,17 +565,16 @@ if st.session_state.clicked:
     if all([league, team, player, position]):
         st.write(f"Generating radar for {player} in {league} ({team}, {position})")
         
-        player_data = filter_data(wyscout, league, team, player, position)
-        if not player_data.empty:
-            fig, ax = plt.subplots()
-            ax.plot(player_data.index, player_data["Minutes played"], label="Minutes Played")
-            ax.set_title(f"Radar Plot for {player}")
-            ax.legend()
+        # Generate and render the radar plot
+        result = create_pizza_plot((league, team, player, position), position_dfs, plot_type)
+        if result is not None:
+            fig, ax = result  # Unpack the tuple returned by create_pizza_plot
             st.pyplot(fig)
         else:
-            st.warning("Nenhum dado disponível para gerar o radar.")
+            st.warning("Não foi possível gerar o radar. Verifique se os dados estão completos.")
     else:
         st.warning("Certifique-se de selecionar liga, time, jogador e posição válidos antes de gerar o radar.")
+
 
 
 # Write the player info for more information
