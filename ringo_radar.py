@@ -5,7 +5,6 @@ import pandas as pd
 from mplsoccer import PyPizza, FontManager, Sbopen
 from scipy import stats
 
-
 def click_button():
     st.session_state.clicked = True
 
@@ -566,11 +565,15 @@ if st.session_state.clicked:
     if all([league, team, player, position]):
         st.write(f"Generating radar for {player} in {league} ({team}, {position})")
         
-        # Validate and render the radar plot
-        result = filter_data(wyscout, league, team, player, position)
-        if result is not None:
-            fig, _ = result
+        player_data = filter_data(wyscout, league, team, player, position)
+        if not player_data.empty:
+            fig, ax = plt.subplots()
+            ax.plot(player_data.index, player_data["Minutes played"], label="Minutes Played")
+            ax.set_title(f"Radar Plot for {player}")
+            ax.legend()
             st.pyplot(fig)
+        else:
+            st.warning("Nenhum dado disponível para gerar o radar.")
     else:
         st.warning("Certifique-se de selecionar liga, time, jogador e posição válidos antes de gerar o radar.")
 
